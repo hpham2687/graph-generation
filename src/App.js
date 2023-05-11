@@ -1,21 +1,38 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
+import MathField from './components/MathField';
+import { create, all } from 'mathjs'
 import './App.css';
 
 import Chart from 'chart.js/auto'
 
-function App() {
-  const [imgUrl, setImgUrl] = useState('')
-  const [showingImage, setShowingImage] = useState(false)
-  let myChart;
-  
+const config = { }
+const math = create(all, config)
 
-  useEffect(() => {
+function App() {
+  // const [imgUrl, setImgUrl] = useState('')
+  const [showingGraph, setShowingGraph] = useState(false)
+  const [equation, setEquation] = useState('x^3 + x^2 +1');
+  let myChartRef = useRef();
+  let expr
+  try {
+    expr = math.compile(equation)
+  } catch (error) {
+    console.error(error)
+  }
+
+  const handleChangeMathInput = useCallback((e) => {
+      setEquation(e.target.value);
+    },
+    []
+  );
+  
+  const generateGraph = () => {
 
     let labels = []
-    let i = -1.2;
-    while (i <= 1.2) {
+    let i = -4;
+    while (i <= 4) {
       labels.push(i)
-      i = i + 0.025
+      i = i + 0.5
     }
 
     (async function() {
@@ -23,37 +40,55 @@ function App() {
       var data = {
         labels: labels,
         datasets: [
+          // {
+          //   label: "f(x) = sin(x)",
+          //   function: function(x) {
+          //     return Math.sin(x)
+          //   },
+          //   borderColor: "rgba(75, 192, 192, 1)",
+          //   data: [],
+          //   fill: false
+          // },
+          // {
+          //   label: "f(x) = cos(x)",
+          //   function: function(x) {
+          //     return Math.cos(x)
+          //   },
+          //   borderColor: "rgba(255, 206, 86, 1)",
+          //   data: [],
+          //   fill: false
+          // },
+          // {
+          //   label: "f(x) = 2",
+          //   function: function(x) {
+          //     return x = 0.5
+          //   },
+          //   borderColor: "rgba(255, 206, 86, 1)",
+          //   data: [],
+          //   fill: false
+          // },
+          // {
+          //   label: "f(x) = sqrt(1 - x * x)",
+          //   function: function(x) {
+          //     return Math.sqrt(1 - parseFloat(x).toPrecision(4) * parseFloat(x).toPrecision(4))
+          //   },
+          //   borderColor: "red",
+          //   data: [],
+          //   fill: false
+          // },
+          // {
+          //   label: "f(x) = sqrt(1 + x * x)",
+          //   function: function(x) {
+          //     return - Math.sqrt(1 - parseFloat(x).toPrecision(4) * parseFloat(x).toPrecision(4))
+          //   },
+          //   borderColor: "blue",
+          //   data: [],
+          //   fill: false
+          // },
           {
-            label: "f(x) = sin(x)",
+            label: "f(x) = x^2 + x",
             function: function(x) {
-              return Math.sin(x)
-            },
-            borderColor: "rgba(75, 192, 192, 1)",
-            data: [],
-            fill: false
-          },
-          {
-            label: "f(x) = cos(x)",
-            function: function(x) {
-              return Math.cos(x)
-            },
-            borderColor: "rgba(255, 206, 86, 1)",
-            data: [],
-            fill: false
-          },
-          {
-            label: "f(x) = sqrt(1 - x * x)",
-            function: function(x) {
-              return Math.sqrt(1 - parseFloat(x).toPrecision(4) * parseFloat(x).toPrecision(4))
-            },
-            borderColor: "red",
-            data: [],
-            fill: false
-          },
-          {
-            label: "f(x) = sqrt(1 + x * x)",
-            function: function(x) {
-              return - Math.sqrt(1 - parseFloat(x).toPrecision(4) * parseFloat(x).toPrecision(4))
+              return expr.evaluate({x});
             },
             borderColor: "blue",
             data: [],
@@ -79,7 +114,7 @@ function App() {
       
       Chart.register(functionPlugin); 
       
-      myChart = new Chart(ctx, {
+      myChartRef.current = new Chart(ctx, {
         type: 'line',
         data: data,
         options: {
@@ -95,31 +130,41 @@ function App() {
         }
       });
 
+      // setTimeout(() => {
+      //   var url=myChartRef.current.toBase64Image();
+      //   setImgUrl(url)
+      // }, 1000)
       setTimeout(() => {
-        var url=myChart.toBase64Image();
-        setImgUrl(url)
+        setShowingGraph(!showingGraph)
       }, 1000)
-
     })();
+  }
+
+  useEffect(() => {
 
     return () => {
-      myChart.destroy();
+      myChartRef?.current?.destroy();
     }
   }, [])
 
   return (
     <>
-      { showingImage ? (
-        <img alt="generated" src={imgUrl}/>
-      ) : (
-        <div style={{
+      { !showingGraph ? (
+        // <img alt="generated" src={imgUrl}/>
+        <div> 
+          <MathField
+            equation={equation}
+            onMathInput={handleChangeMathInput}
+          />
+        </div>
+      ) : null}
+      <button onClick={generateGraph}>Generate</button> 
+      <div style={{
           width: 1000,
           height: 1000,
         }} id="chart-wrapper" >
         <canvas id="myChart"></canvas>
-        </div>
-      )}
-      <button onClick={() => setShowingImage(!showingImage)}>Toggle</button> 
+      </div>
     </>
   );
 }
