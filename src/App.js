@@ -9,24 +9,34 @@ const config = { }
 const math = create(all, config)
 
 function App() {
-  // const [imgUrl, setImgUrl] = useState('')
-  const [showingGraph, setShowingGraph] = useState(false)
-  const [equation, setEquation] = useState('x^3 + x^2 +1');
-  let myChartRef = useRef();
-  let expr
-  try {
-    expr = math.compile(equation)
-  } catch (error) {
-    console.error(error)
-  }
+  const [equation, setEquation] = useState('');
+  const [equation2, setEquation2] = useState('');
+  const myChartRef = useRef();
 
-  const handleChangeMathInput = useCallback((e) => {
-      setEquation(e.target.value);
+  const handleChangeMathInput = useCallback(( isFirstEquation, e) => {
+      if (isFirstEquation) {
+        setEquation(e.target.value);
+      } else {
+        setEquation2(e.target.value)
+      }
     },
     []
   );
+
+  const checkIfExpressionIsValid = useCallback((expr) => {
+    try {
+      expr.evaluate({x: 0});
+      expr.evaluate({x: -1});
+      expr.evaluate({x: 1});
+    }
+    catch (error) {
+      console.log(error)
+      return false;
+    }
+    return true;
+  }, [])
   
-  const generateGraph = () => {
+  const generateGraph = useCallback((expr, expr2) => {
 
     let labels = []
     let i = -4;
@@ -67,15 +77,21 @@ function App() {
           //   data: [],
           //   fill: false
           // },
-          // {
-          //   label: "f(x) = sqrt(1 - x * x)",
-          //   function: function(x) {
-          //     return Math.sqrt(1 - parseFloat(x).toPrecision(4) * parseFloat(x).toPrecision(4))
-          //   },
-          //   borderColor: "red",
-          //   data: [],
-          //   fill: false
-          // },
+          {
+            label: "Function 2",
+            function: function(x) {
+              try {
+                return expr2.evaluate({x});
+              }
+              catch (error) {
+                console.log(error)
+                return 0;
+              }
+            },
+            borderColor: "red",
+            data: [],
+            fill: false
+          },
           // {
           //   label: "f(x) = sqrt(1 + x * x)",
           //   function: function(x) {
@@ -86,17 +102,22 @@ function App() {
           //   fill: false
           // },
           {
-            label: "f(x) = x^2 + x",
+            label: "Function 1",
             function: function(x) {
-              return expr.evaluate({x});
+              try {
+                return expr.evaluate({x});
+              }
+              catch (error) {
+                console.log(error)
+                return 0;
+              }
             },
             borderColor: "blue",
             data: [],
             fill: false
           },
         ]
-      };
-
+      }
       const functionPlugin = {
         id: 'functionPlugin',
         beforeInit: function(chart) {
@@ -113,52 +134,55 @@ function App() {
       }
       
       Chart.register(functionPlugin); 
-      
-      myChartRef.current = new Chart(ctx, {
-        type: 'line',
-        data: data,
-        options: {
-          cubicInterpolationMode: 'monotone',
-          aspectRatio: 1,
-          scales: {
-            yAxes: [{
-              ticks: {
-                beginAtZero: true
-              }
-            }]
-          }
-        }
-      });
 
-      // setTimeout(() => {
-      //   var url=myChartRef.current.toBase64Image();
-      //   setImgUrl(url)
-      // }, 1000)
-      setTimeout(() => {
-        setShowingGraph(!showingGraph)
-      }, 1000)
+        myChartRef.current = new Chart(ctx, {
+          type: 'line',
+          data: data,
+          options: {
+            cubicInterpolationMode: 'monotone',
+            aspectRatio: 1,
+            scales: {
+              yAxes: [{
+                ticks: {
+                  beginAtZero: true
+                }
+              }]
+            }
+          }
+        });
     })();
-  }
+  }, [])
 
   useEffect(() => {
-
-    return () => {
-      myChartRef?.current?.destroy();
+    let expr = null;
+    let expr2 = null;
+    try {
+      expr = math.compile(equation)
+      expr2 = math.compile(equation2)
+    } catch (error) {
+      console.error(error)
     }
-  }, [])
+    const isValid = checkIfExpressionIsValid(expr) || checkIfExpressionIsValid(expr2)
+    if (isValid) {
+      myChartRef?.current?.destroy();
+      generateGraph(expr, expr2);
+    }
+  }, [checkIfExpressionIsValid, equation, equation2, generateGraph])
 
   return (
     <>
-      { !showingGraph ? (
-        // <img alt="generated" src={imgUrl}/>
         <div> 
           <MathField
             equation={equation}
-            onMathInput={handleChangeMathInput}
+            onMathInput={(e) => handleChangeMathInput(true, e)}
           />
         </div>
-      ) : null}
-      <button onClick={generateGraph}>Generate</button> 
+        <div> 
+          <MathField
+            equation={equation2}
+            onMathInput={(e) => handleChangeMathInput(false, e)}
+          />
+        </div>
       <div style={{
           width: 1000,
           height: 1000,
