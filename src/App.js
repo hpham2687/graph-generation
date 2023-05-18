@@ -10,7 +10,7 @@ function App() {
   const [equation2, setEquation2] = useState('');
   const [bottom, setBottom] = useState(-4)
   const [top, setTop] = useState(4)
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(0.5)
   const myChartRef = useRef();
   const ce = useMemo(() => {return new ComputeEngine();}, [])
 
@@ -40,7 +40,7 @@ function App() {
     return true;
   }, [ce])
   
-  const generateGraph = useCallback((labelList, expr, expr2) => {
+  const generateGraph = useCallback((labelList, resultList, resultList2) => {
 
     (async function() {
       var ctx = document.getElementById("myChart");
@@ -49,10 +49,9 @@ function App() {
         datasets: [
           {
             label: "Function 1",
-            function: function(x) {
+            function: function(index) {
               try {
-                ce.set({x : x});
-                return expr.N().valueOf()
+                return resultList[index]
               }
               catch (error) {
                 console.log(error)
@@ -65,16 +64,18 @@ function App() {
           },
           {
             label: "Function 2",
-            function: function(x) {
+            function: function(index) {
               try {
-                ce.set({x : x});
-                return expr2.N().valueOf()
+                return resultList2[index]
               }
               catch (error) {
                 console.log(error)
                 return 0;
               }
             },
+            borderColor: "red",
+            data: [],
+            fill: false
           },
         ]
       }
@@ -85,8 +86,7 @@ function App() {
           for (var i = 0; i < data.datasets.length; i++) {
             for (var j = 0; j < data.labels.length; j++) {
               var fct = data.datasets[i].function,
-                x = data.labels[j],
-                y = fct(x);
+                y = fct(j);
               data.datasets[i].data.push(y);
             }
           }
@@ -121,22 +121,29 @@ function App() {
       return list
     }
 
-    let expr = null;
-    let expr2 = null;
+    let resultList = [];
+    let resultList2 = [];
+    const labelList = getLabelList();
     try {
-      expr = ce.parse(equation);
-      expr2 = ce.parse(equation2);
+      let expr = ce.parse(equation);
+      resultList = labelList.map(value => {
+        ce.set({x : value});
+        return expr.N().valueOf()
+      })
+      expr = ce.parse(equation2);
+      resultList2 = labelList.map(value => {
+        ce.set({x : value});
+        return expr.N().valueOf()
+      })
     } catch (error) {
       console.error(error)
     }
-    const isValid = checkIfExpressionIsValid(expr) || checkIfExpressionIsValid(expr2)
+    const isValid = true
     if (isValid) {
-      const labelList = getLabelList();
-      console.log({labelList})
       myChartRef?.current?.destroy();
-      generateGraph(labelList, expr, expr2);
+      generateGraph(labelList, resultList, resultList2);
     }
-  }, [ce, checkIfExpressionIsValid, equation, equation2, generateGraph])
+  }, [bottom, ce, checkIfExpressionIsValid, equation, equation2, generateGraph, step, top])
 
   return (
     <>
