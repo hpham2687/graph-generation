@@ -1,17 +1,18 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import MathField from './components/MathField';
-import { create, all } from 'mathjs'
+import { ComputeEngine } from 'https://unpkg.com/@cortex-js/compute-engine?module';
 import './App.css';
 
 import Chart from 'chart.js/auto'
 
-const config = { }
-const math = create(all, config)
-
 function App() {
   const [equation, setEquation] = useState('');
   const [equation2, setEquation2] = useState('');
+  const [bottom, setBottom] = useState(-4)
+  const [top, setTop] = useState(4)
+  const [step, setStep] = useState(1)
   const myChartRef = useRef();
+  const ce = useMemo(() => {return new ComputeEngine();}, [])
 
   const handleChangeMathInput = useCallback(( isFirstEquation, e) => {
       if (isFirstEquation) {
@@ -25,87 +26,34 @@ function App() {
 
   const checkIfExpressionIsValid = useCallback((expr) => {
     try {
-      expr.evaluate({x: 0});
-      expr.evaluate({x: -1});
-      expr.evaluate({x: 1});
+      ce.set({x : -1});
+      expr.N().valueOf()
+      ce.set({x : 0});
+      expr.N().valueOf()
+      ce.set({x : 1});
+      expr.N().valueOf()
     }
     catch (error) {
       console.log(error)
       return false;
     }
     return true;
-  }, [])
+  }, [ce])
   
-  const generateGraph = useCallback((expr, expr2) => {
-
-    let labels = []
-    let i = -4;
-    while (i <= 4) {
-      labels.push(i)
-      i = i + 0.5
-    }
+  const generateGraph = useCallback((labelList, expr, expr2) => {
 
     (async function() {
       var ctx = document.getElementById("myChart");
       var data = {
-        labels: labels,
+        labels: labelList,
         datasets: [
-          // {
-          //   label: "f(x) = sin(x)",
-          //   function: function(x) {
-          //     return Math.sin(x)
-          //   },
-          //   borderColor: "rgba(75, 192, 192, 1)",
-          //   data: [],
-          //   fill: false
-          // },
-          // {
-          //   label: "f(x) = cos(x)",
-          //   function: function(x) {
-          //     return Math.cos(x)
-          //   },
-          //   borderColor: "rgba(255, 206, 86, 1)",
-          //   data: [],
-          //   fill: false
-          // },
-          // {
-          //   label: "f(x) = 2",
-          //   function: function(x) {
-          //     return x = 0.5
-          //   },
-          //   borderColor: "rgba(255, 206, 86, 1)",
-          //   data: [],
-          //   fill: false
-          // },
-          {
-            label: "Function 2",
-            function: function(x) {
-              try {
-                return expr2.evaluate({x});
-              }
-              catch (error) {
-                console.log(error)
-                return 0;
-              }
-            },
-            borderColor: "red",
-            data: [],
-            fill: false
-          },
-          // {
-          //   label: "f(x) = sqrt(1 + x * x)",
-          //   function: function(x) {
-          //     return - Math.sqrt(1 - parseFloat(x).toPrecision(4) * parseFloat(x).toPrecision(4))
-          //   },
-          //   borderColor: "blue",
-          //   data: [],
-          //   fill: false
-          // },
           {
             label: "Function 1",
             function: function(x) {
               try {
-                return expr.evaluate({x});
+                ce.set({x : x});
+                // return expr.evaluate({x});
+                return expr.N().valueOf()
               }
               catch (error) {
                 console.log(error)
@@ -115,6 +63,20 @@ function App() {
             borderColor: "blue",
             data: [],
             fill: false
+          },
+          {
+            label: "Function 2",
+            function: function(x) {
+              try {
+                // return expr2.evaluate({x});
+                ce.set({x : x});
+                return expr2.N().valueOf()
+              }
+              catch (error) {
+                console.log(error)
+                return 0;
+              }
+            },
           },
         ]
       }
@@ -142,32 +104,41 @@ function App() {
             cubicInterpolationMode: 'monotone',
             aspectRatio: 1,
             scales: {
-              yAxes: [{
-                ticks: {
-                  beginAtZero: true
-                }
-              }]
+              y: {
+              },
             }
           }
         });
     })();
-  }, [])
+  }, [ce])
 
   useEffect(() => {
+    const getLabelList = () => {
+      let list = []
+      let i = bottom
+      while (i <= top) {
+        list.push(i)
+        i = i + step
+      }
+      return list
+    }
+
     let expr = null;
     let expr2 = null;
     try {
-      expr = math.compile(equation)
-      expr2 = math.compile(equation2)
+      expr = ce.parse(equation);
+      expr2 = ce.parse(equation2);
     } catch (error) {
       console.error(error)
     }
     const isValid = checkIfExpressionIsValid(expr) || checkIfExpressionIsValid(expr2)
     if (isValid) {
+      const labelList = getLabelList();
+      console.log({labelList})
       myChartRef?.current?.destroy();
-      generateGraph(expr, expr2);
+      generateGraph(labelList, expr, expr2);
     }
-  }, [checkIfExpressionIsValid, equation, equation2, generateGraph])
+  }, [ce, checkIfExpressionIsValid, equation, equation2, generateGraph])
 
   return (
     <>
@@ -182,6 +153,11 @@ function App() {
             equation={equation2}
             onMathInput={(e) => handleChangeMathInput(false, e)}
           />
+        </div>
+        <div>
+          <h3> Bottom: <input type="number" onChange={(e) => setBottom(e.target.value)} value={bottom} /> </h3>
+          <h3> Top: <input type="number" onChange={(e) => setTop(e.target.value)} value={top} /> </h3>
+          <h3> Step: <input type="number" onChange={(e) => setStep(e.target.value)} value={step} /> </h3>
         </div>
       <div style={{
           width: 1000,

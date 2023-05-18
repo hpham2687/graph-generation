@@ -5,15 +5,15 @@ const Mathfield = ({equation, onMathInput}) => {
 
   useEffect(() => {
 
-    window.mathVirtualKeyboard.layouts = {
-      rows: [
-      [
-      "+", "-", "\\times", "\\frac{#@}{#?}", "=", ".",
-      "(", ")", "\\sqrt{#0}", "#@^{#?}",
-      ],
-      ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
-      ]
-    };
+    // window.mathVirtualKeyboard.layouts = {
+    //   rows: [
+    //   [
+    //   "+", "-", "\\times", "\\frac{#@}{#?}", "=", ".",
+    //   "(", ")", "\\sqrt{#0}", "#@^{#?}",
+    //   ],
+    //   ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+    //   ]
+    // };
     // const mf = document.getElementById("equation")
     // mf.setOptions({onExport: (mf, latex) => `<math>${latex}</math>`});
     // mathFieldRef.current.<option> = <value>;
