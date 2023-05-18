@@ -20,7 +20,9 @@ const Mathfield = ({equation, onMathInput}) => {
   }, []);
 
   return (
-    <math-field id="equation" onInput={onMathInput} ref={mathFieldRef}>{equation}</math-field>
+    <math-field id="equation" onInput={onMathInput} ref={mathFieldRef}
+    style={{width: 150}}
+    >{equation}</math-field>
   );
 };
    
