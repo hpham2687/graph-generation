@@ -52,7 +52,6 @@ function App() {
             function: function(x) {
               try {
                 ce.set({x : x});
-                // return expr.evaluate({x});
                 return expr.N().valueOf()
               }
               catch (error) {
@@ -68,7 +67,6 @@ function App() {
             label: "Function 2",
             function: function(x) {
               try {
-                // return expr2.evaluate({x});
                 ce.set({x : x});
                 return expr2.N().valueOf()
               }
