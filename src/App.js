@@ -5,11 +5,14 @@ import './App.css';
 
 import Chart from 'chart.js/auto'
 
+const GRID_ORIGIN_AXIS_COLOR = 'rgba(0,0,0)'
+const GRID_COLOR = 'rgba(0, 0, 0, 0.1)'
+
 function App() {
   const [equation, setEquation] = useState('');
   const [equation2, setEquation2] = useState('');
-  const [bottom, setBottom] = useState(-4)
-  const [top, setTop] = useState(4)
+  const [range, setRange] = useState(4)
+  const bottom = -range;
   const [step, setStep] = useState(0.5)
   const myChartRef = useRef();
   const ce = useMemo(() => {return new ComputeEngine();}, [])
@@ -83,16 +86,15 @@ function App() {
         id: 'functionPlugin',
         beforeInit: function(chart) {
           var data = chart.config.data;
-          for (var i = 0; i < data.datasets.length; i++) {
+           for (var i = 0; i < data.datasets.length; i++) {
             for (var j = 0; j < data.labels.length; j++) {
               var fct = data.datasets[i].function,
                 y = fct(j);
-              data.datasets[i].data.push(y);
+               data.datasets[i].data.push(y);
             }
           }
         }
       }
-      
       Chart.register(functionPlugin); 
 
         myChartRef.current = new Chart(ctx, {
@@ -102,29 +104,47 @@ function App() {
             cubicInterpolationMode: 'monotone',
             aspectRatio: 1,
             scales: {
+              x: {
+                grid: {
+                  color: (context: any) => {
+                    if (context.tick.value  === range*2) {
+                      return GRID_ORIGIN_AXIS_COLOR;
+                    }               
+                    return GRID_COLOR   
+                  }
+                }
+              },
               y: {
+                grid: {
+                  color: (context: any) => {
+                    if (context.tick.value  === 0) {
+                      return GRID_ORIGIN_AXIS_COLOR;
+                    }               
+                    return GRID_COLOR;   
+                  }
+                }
               },
             }
           }
-        });
+        });     
     })();
-  }, [ce])
+  }, [range])
 
-  useEffect(() => {
-    const getLabelList = () => {
-      let list = []
-      let i = bottom
-      while (i <= top) {
-        list.push(i)
-        i = i + step
-      }
-      return list
+  const getLabelList = useCallback(() => {
+    let list = []
+    let i = bottom
+    while (i <= range) {
+      list.push(i)
+      i = i + step
     }
+    return list
+  },[bottom, step, range])
 
+  useEffect(() => {    
     let resultList = [];
     let resultList2 = [];
     const labelList = getLabelList();
-    try {
+     try {
       let expr = ce.parse(equation);
       resultList = labelList.map(value => {
         ce.set({x : value});
@@ -135,15 +155,15 @@ function App() {
         ce.set({x : value});
         return expr.N().valueOf()
       })
-    } catch (error) {
+     } catch (error) {
       console.error(error)
-    }
-    const isValid = true
-    if (isValid) {
-      myChartRef?.current?.destroy();
+    }    
+      if (myChartRef?.current){
+        myChartRef?.current?.destroy();
+      }
       generateGraph(labelList, resultList, resultList2);
-    }
-  }, [bottom, ce, checkIfExpressionIsValid, equation, equation2, generateGraph, step, top])
+    
+  }, [ce, equation, equation2, generateGraph, getLabelList])
 
   return (
     <>
@@ -160,8 +180,7 @@ function App() {
           />
         </div>
         <div>
-          <h3> Bottom: <input type="number" onChange={(e) => setBottom(e.target.value)} value={bottom} /> </h3>
-          <h3> Top: <input type="number" onChange={(e) => setTop(e.target.value)} value={top} /> </h3>
+           <h3> Range: <input type="number" onChange={(e) => setRange(e.target.value)} value={range} /> </h3>
           <h3> Step: <input type="number" onChange={(e) => setStep(e.target.value)} value={step} /> </h3>
         </div>
       <div style={{
