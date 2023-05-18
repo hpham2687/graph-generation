@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import MathField from './components/MathField';
-import { ComputeEngine } from 'https://unpkg.com/@cortex-js/compute-engine?module';
 import './App.css';
 
 import Chart from 'chart.js/auto'
 
 const GRID_ORIGIN_AXIS_COLOR = 'rgba(0,0,0)'
 const GRID_COLOR = 'rgba(0, 0, 0, 0.1)'
+
+const { ComputeEngine } = window.ComputeEngine 
 
 function App() {
   const [equation, setEquation] = useState('');
@@ -27,21 +28,6 @@ function App() {
     []
   );
 
-  const checkIfExpressionIsValid = useCallback((expr) => {
-    try {
-      ce.set({x : -1});
-      expr.N().valueOf()
-      ce.set({x : 0});
-      expr.N().valueOf()
-      ce.set({x : 1});
-      expr.N().valueOf()
-    }
-    catch (error) {
-      console.log(error)
-      return false;
-    }
-    return true;
-  }, [ce])
   
   const generateGraph = useCallback((labelList, resultList, resultList2) => {
 
@@ -93,6 +79,7 @@ function App() {
                data.datasets[i].data.push(y);
             }
           }
+          console.log(data.datasets);
         }
       }
       Chart.register(functionPlugin); 
@@ -141,6 +128,7 @@ function App() {
   },[bottom, step, range])
 
   useEffect(() => {    
+    console.log("enterrrr");
     let resultList = [];
     let resultList2 = [];
     const labelList = getLabelList();
