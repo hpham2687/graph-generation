@@ -3,28 +3,38 @@ import MathField from "./components/MathField";
 import "./App.css";
 
 import Chart from "chart.js/auto";
+import zoomPlugin from "chartjs-plugin-zoom";
 
 const GRID_ORIGIN_AXIS_COLOR = "rgba(0,0,0)";
 const GRID_COLOR = "rgba(0, 0, 0, 0.1)";
 
 const { ComputeEngine } = window.ComputeEngine;
+Chart.register(zoomPlugin);
 
-const functionPlugin = {
-  id: "functionPlugin",
-  beforeInit: function (chart) {
-    var data = chart.config.data;
-    for (var i = 0; i < data.datasets.length; i++) {
-      for (var j = 0; j < data.labels.length; j++) {
-        var fct = data.datasets[i].function,
-          y = fct(j);
-        data.datasets[i].data.push(y);
-      }
+function thickenArray(arr, count) {
+  const result = [];
+  const len = arr.length;
+
+  for (let i = 0; i < len - 1; i++) {
+    const currentNum = arr[i];
+    const nextNum = arr[i + 1];
+    const interval = (nextNum - currentNum) / (count + 1);
+
+    result.push(currentNum);
+
+    for (let j = 1; j <= count; j++) {
+      const newValue = currentNum + j * interval;
+      result.push(newValue);
     }
-  },
-};
+  }
+
+  result.push(arr[len - 1]);
+  return result;
+}
 
 function App() {
   const chartRegisteredRef = useRef(false);
+  const [labelList, setLabelList] = useState([]);
   const [equation, setEquation] = useState("");
   const [equation2, setEquation2] = useState("");
   const [bottom, setBottom] = useState(-4);
@@ -43,113 +53,143 @@ function App() {
     }
   }, []);
 
-  const generateGraph = useCallback((labelList, resultList, resultList2) => {
-    var ctx = document.getElementById("myChart");
-    var data = {
-      labels: labelList,
-      datasets: [
-        {
-          label: "Function 1",
-          function: function (index) {
-            try {
-              return resultList[index];
-            } catch (error) {
-              console.log(error);
-              return 0;
-            }
-          },
-          borderColor: "blue",
-          data: [],
-          fill: false,
-        },
-        {
-          label: "Function 2",
-          function: function (index) {
-            try {
-              return resultList2[index];
-            } catch (error) {
-              console.log(error);
-              return 0;
-            }
-          },
-          borderColor: "red",
-          data: [],
-          fill: false,
-        },
-      ],
-    };
+  const generateGraph = useCallback(
+    (resultList, resultList2) => {
+      var ctx = document.getElementById("myChart");
+      var data = {
+        // labels: labelList,
+        datasets: [
+          {
+            label: "Function 1",
 
-    if (!chartRegisteredRef.current) {
-      Chart.register(functionPlugin);
-      console.log("enter chart register");
-      chartRegisteredRef.current = true;
-    }
+            borderColor: "blue",
+            data: resultList,
+            fill: false,
+          },
+          // {
+          //   label: "Function 2",
 
-    myChartRef.current = new Chart(ctx, {
-      type: "line",
-      data: data,
-      options: {
-        cubicInterpolationMode: "monotone",
-        aspectRatio: 1,
-        scales: {
-          x: {
-            grid: {
-              color: (context: any) => {
-                if (context.tick.label == 0) {
-                  return GRID_ORIGIN_AXIS_COLOR;
-                }
-                return GRID_COLOR;
+          //   borderColor: "red",
+          //   data: [],
+          //   fill: false,
+          // },
+        ],
+      };
+      if (!myChartRef.current) {
+        myChartRef.current = new Chart(ctx, {
+          type: "scatter",
+          data: data,
+          options: {
+            showLine: true,
+            cubicInterpolationMode: "monotone",
+            aspectRatio: 1,
+            scales: {
+              x: {
+                grid: {
+                  color: (context: any) => {
+                    if (context.tick.label == 0) {
+                      return GRID_ORIGIN_AXIS_COLOR;
+                    }
+                    return GRID_COLOR;
+                  },
+                },
+                min: -500,
+                max: 500,
+              },
+              y: {
+                min: -500,
+                max: 500,
+                grid: {
+                  color: (context: any) => {
+                    if (context.tick.value == 0) {
+                      return GRID_ORIGIN_AXIS_COLOR;
+                    }
+                    return GRID_COLOR;
+                  },
+                },
+              },
+            },
+            plugins: {
+              zoom: {
+                limits: {
+                  x: { min: -500, max: 500 },
+                  y: { min: -500, max: 500 },
+                },
+                pan: {
+                  enabled: true,
+                  mode: "xy",
+                  onPan: ({ chart }) => {
+                    const xScale = chart.scales["x"];
+
+                    const labelList = xScale.ticks.map((tick) =>
+                      Number(tick.label)
+                    );
+                    setLabelList(labelList);
+                  },
+                },
+                zoom: {
+                  wheel: {
+                    enabled: true,
+                  },
+                  pinch: {
+                    enabled: true,
+                  },
+                  pan: {
+                    enabled: true,
+                    mode: "xy",
+                  },
+                  // drag: {
+                  //   enabled: true,
+                  // },
+                  mode: "xy",
+                  onZoomComplete: ({ chart }) => {
+                    const xScale = chart.scales["x"];
+
+                    const labelList = xScale.ticks.map((tick) =>
+                      Number(tick.label)
+                    );
+                    setLabelList(labelList);
+                  },
+                },
               },
             },
           },
-          y: {
-            grid: {
-              color: (context: any) => {
-                if (context.tick.value == 0) {
-                  return GRID_ORIGIN_AXIS_COLOR;
-                }
-                return GRID_COLOR;
-              },
-            },
-          },
-        },
-      },
-    });
-  }, []);
+        });
 
-  const getLabelList = useCallback(() => {
-    let list = [];
-    let i = bottom;
-    while (i <= top) {
-      list.push(i);
-      i = i + step;
-    }
-    return list;
-  }, [bottom, step, top]);
+        const xScale = myChartRef.current.scales["x"];
+        const labelList = xScale.ticks.map((tick) => Number(tick.label));
+        setLabelList(labelList);
+      } else {
+        myChartRef.current.data.datasets[0].data = resultList;
+        myChartRef.current.update();
+      }
+    },
+    [ce, equation]
+  );
 
   useEffect(() => {
     let resultList = [];
     let resultList2 = [];
-    const labelList = getLabelList();
 
     let expr = ce.parse(equation);
-    resultList = labelList.map((value) => {
+    const newLabelList = thickenArray(labelList, 2);
+    resultList = newLabelList.map((value) => {
       ce.set({ x: value });
       return expr.N().valueOf();
     });
+    resultList = resultList.map((item, index) => ({
+      x: newLabelList[index],
+      y: item,
+    }));
+
     expr = ce.parse(equation2);
     resultList2 = labelList.map((value) => {
       ce.set({ x: value });
       return expr.N().valueOf();
     });
 
-    if (myChartRef?.current) {
-      myChartRef?.current.reset();
-
-      myChartRef?.current?.destroy();
-    }
-    generateGraph(labelList, resultList, resultList2);
-  }, [ce, equation, equation2, generateGraph, getLabelList]);
+    generateGraph(resultList, resultList2);
+  }, [ce, equation, equation2, generateGraph, labelList]);
 
   return (
     <>
@@ -161,17 +201,17 @@ function App() {
             onMathInput={(e) => handleChangeMathInput(true, e)}
           />
         </div>
-        <div style={{ marginLeft: 64 }}>
+        {/* <div style={{ marginLeft: 64 }}>
           <span style={{ marginRight: 8 }}>Input graph 2 equation:</span>
 
           <MathField
             equation={equation2}
             onMathInput={(e) => handleChangeMathInput(false, e)}
           />
-        </div>
+        </div> */}
       </div>
       <div style={{ display: "flex", justifyContent: "center" }}>
-        <h3>
+        {/* <h3>
           {" "}
           <span style={{ marginRight: 8 }}>Start X coordinate:</span>
           <input
@@ -202,7 +242,7 @@ function App() {
         </h3>
 
         <h3>
-        <span style={{ marginLeft: 8 }}>Step:</span>        
+          <span style={{ marginLeft: 8 }}>Step:</span>
           <input
             type="number"
             onChange={(e) => {
@@ -213,7 +253,7 @@ function App() {
             }}
             value={step}
           />{" "}
-        </h3>
+        </h3> */}
       </div>
       <div
         style={{
