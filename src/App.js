@@ -66,13 +66,13 @@ function App() {
             data: resultList,
             fill: false,
           },
-          // {
-          //   label: "Function 2",
+          {
+            label: "Function 2",
 
-          //   borderColor: "red",
-          //   data: [],
-          //   fill: false,
-          // },
+            borderColor: "red",
+            data: resultList2,
+            fill: false,
+          },
         ],
       };
       if (!myChartRef.current) {
@@ -82,7 +82,7 @@ function App() {
           options: {
             showLine: true,
             cubicInterpolationMode: "monotone",
-            aspectRatio: 1,
+            // aspectRatio: 1,
             scales: {
               x: {
                 grid: {
@@ -93,12 +93,21 @@ function App() {
                     return GRID_COLOR;
                   },
                 },
-                min: -500,
-                max: 500,
+                type: "linear",
+                ticks: {
+                  maxTicksLimit: 30, // Maximum number of ticks on the x-axis
+                  stepSize: 0.5,
+                },
+                min: -100,
+                max: 100,
               },
               y: {
-                min: -500,
-                max: 500,
+                ticks: {
+                  maxTicksLimit: 30, // Maximum number of ticks on the x-axis
+                  stepSize: 0.5,
+                },
+                min: -100,
+                max: 100,
                 grid: {
                   color: (context: any) => {
                     if (context.tick.value == 0) {
@@ -112,8 +121,8 @@ function App() {
             plugins: {
               zoom: {
                 limits: {
-                  x: { min: -500, max: 500 },
-                  y: { min: -500, max: 500 },
+                  x: { min: -500, max: 500, minRange: 3 },
+                  y: { min: -500, max: 500, minRange: 3 },
                 },
                 pan: {
                   enabled: true,
@@ -138,13 +147,9 @@ function App() {
                     enabled: true,
                     mode: "xy",
                   },
-                  // drag: {
-                  //   enabled: true,
-                  // },
                   mode: "xy",
                   onZoomComplete: ({ chart }) => {
                     const xScale = chart.scales["x"];
-
                     const labelList = xScale.ticks.map((tick) =>
                       Number(tick.label)
                     );
@@ -161,6 +166,7 @@ function App() {
         setLabelList(labelList);
       } else {
         myChartRef.current.data.datasets[0].data = resultList;
+        myChartRef.current.data.datasets[1].data = resultList2;
         myChartRef.current.update();
       }
     },
@@ -183,10 +189,14 @@ function App() {
     }));
 
     expr = ce.parse(equation2);
-    resultList2 = labelList.map((value) => {
+    resultList2 = newLabelList.map((value) => {
       ce.set({ x: value });
       return expr.N().valueOf();
     });
+    resultList2 = resultList2.map((item, index) => ({
+      x: newLabelList[index],
+      y: item,
+    }));
 
     generateGraph(resultList, resultList2);
   }, [ce, equation, equation2, generateGraph, labelList]);
@@ -201,14 +211,14 @@ function App() {
             onMathInput={(e) => handleChangeMathInput(true, e)}
           />
         </div>
-        {/* <div style={{ marginLeft: 64 }}>
+        <div style={{ marginLeft: 64 }}>
           <span style={{ marginRight: 8 }}>Input graph 2 equation:</span>
 
           <MathField
             equation={equation2}
             onMathInput={(e) => handleChangeMathInput(false, e)}
           />
-        </div> */}
+        </div>
       </div>
       <div style={{ display: "flex", justifyContent: "center" }}>
         {/* <h3>
