@@ -33,13 +33,9 @@ function thickenArray(arr, count) {
 }
 
 function App() {
-  const chartRegisteredRef = useRef(false);
   const [labelList, setLabelList] = useState([]);
   const [equation, setEquation] = useState("");
   const [equation2, setEquation2] = useState("");
-  const [bottom, setBottom] = useState(-4);
-  const [top, setTop] = useState(4);
-  const [step, setStep] = useState(0.5);
   const myChartRef = useRef();
   const ce = useMemo(() => {
     return new ComputeEngine();
@@ -52,126 +48,137 @@ function App() {
       setEquation2(e.target.value);
     }
   }, []);
-
-  const generateGraph = useCallback(
-    (resultList, resultList2) => {
-      var ctx = document.getElementById("myChart");
-      var data = {
-        // labels: labelList,
-        datasets: [
-          {
-            label: "Function 1",
-
-            borderColor: "blue",
-            data: resultList,
-            fill: false,
-          },
-          {
-            label: "Function 2",
-
-            borderColor: "red",
-            data: resultList2,
-            fill: false,
-          },
-        ],
-      };
-      if (!myChartRef.current) {
-        myChartRef.current = new Chart(ctx, {
-          type: "scatter",
-          data: data,
-          options: {
-            showLine: true,
-            cubicInterpolationMode: "monotone",
-            // aspectRatio: 1,
-            scales: {
-              x: {
-                grid: {
-                  color: (context: any) => {
-                    if (context.tick.label == 0) {
-                      return GRID_ORIGIN_AXIS_COLOR;
-                    }
-                    return GRID_COLOR;
-                  },
+  console.log({ labelList });
+  const generateGraph = useCallback((resultList, resultList2) => {
+    var ctx = document.getElementById("myChart");
+    var data = {
+      datasets: [
+        {
+          label: "Function 1",
+          borderColor: "blue",
+          data: resultList,
+          fill: false,
+        },
+        {
+          label: "Function 2",
+          borderColor: "red",
+          data: resultList2,
+          fill: false,
+        },
+      ],
+    };
+    if (!myChartRef.current) {
+      myChartRef.current = new Chart(ctx, {
+        type: "scatter",
+        data: data,
+        options: {
+          showLine: true,
+          cubicInterpolationMode: "monotone",
+          // aspectRatio: 1,
+          scales: {
+            x: {
+              grid: {
+                color: (context: any) => {
+                  if (context.tick.label == 0) {
+                    return GRID_ORIGIN_AXIS_COLOR;
+                  }
+                  return GRID_COLOR;
                 },
-                type: "linear",
-                ticks: {
-                  maxTicksLimit: 30, // Maximum number of ticks on the x-axis
-                  stepSize: 0.5,
-                },
-                min: -100,
-                max: 100,
               },
-              y: {
-                ticks: {
-                  maxTicksLimit: 30, // Maximum number of ticks on the x-axis
-                  stepSize: 0.5,
-                },
-                min: -100,
-                max: 100,
-                grid: {
-                  color: (context: any) => {
-                    if (context.tick.value == 0) {
-                      return GRID_ORIGIN_AXIS_COLOR;
-                    }
-                    return GRID_COLOR;
-                  },
+              type: "linear",
+              ticks: {
+                maxTicksLimit: 20, // Maximum number of ticks on the x-axis
+              },
+              min: -100,
+              max: 100,
+            },
+            y: {
+              ticks: {
+                maxTicksLimit: 20, // Maximum number of ticks on the x-axis
+              },
+              min: -100,
+              max: 100,
+
+              grid: {
+                color: (context: any) => {
+                  if (context.tick.value == 0) {
+                    return GRID_ORIGIN_AXIS_COLOR;
+                  }
+                  return GRID_COLOR;
                 },
               },
             },
-            plugins: {
+          },
+          plugins: {
+            zoom: {
+              limits: {
+                x: { min: -300, max: 300, minRange: 3 },
+                y: { min: -300, max: 300, minRange: 3 },
+              },
+              pan: {
+                enabled: true,
+                mode: "xy",
+                onPan: ({ chart, points }) => {
+                  const xScale = chart.scales["x"];
+
+                  const labelList = xScale.ticks.map((tick) =>
+                    Number(tick.label)
+                  );
+                  setLabelList(labelList);
+
+                  // Get current pan values
+                  var currentPanX = -chart.chartArea.left;
+                  var currentPanY = -chart.chartArea.top;
+                  console.log({
+                    // chart,
+                    // currentPanX, currentPanY
+                    // ,points
+                    xScale,
+                  });
+                },
+              },
               zoom: {
-                limits: {
-                  x: { min: -500, max: 500, minRange: 3 },
-                  y: { min: -500, max: 500, minRange: 3 },
-                },
-                pan: {
+                wheel: {
                   enabled: true,
-                  mode: "xy",
-                  onPan: ({ chart }) => {
-                    const xScale = chart.scales["x"];
-
-                    const labelList = xScale.ticks.map((tick) =>
-                      Number(tick.label)
-                    );
-                    setLabelList(labelList);
-                  },
                 },
-                zoom: {
-                  wheel: {
-                    enabled: true,
-                  },
-                  pinch: {
-                    enabled: true,
-                  },
-                  pan: {
-                    enabled: true,
-                    mode: "xy",
-                  },
-                  mode: "xy",
-                  onZoomComplete: ({ chart }) => {
-                    const xScale = chart.scales["x"];
-                    const labelList = xScale.ticks.map((tick) =>
-                      Number(tick.label)
-                    );
-                    setLabelList(labelList);
-                  },
+                pinch: {
+                  enabled: true,
+                },
+                // pan: {
+                //   enabled: true,
+                //   mode: "xy",
+                // },
+                mode: "xy",
+                onZoomStart: ({ chart, event }) => {
+                  console.log(event);
+                },
+                onZoomComplete: ({ chart }) => {
+                  const xScale = chart.scales["x"];
+                  const labelList = xScale.ticks.map((tick) =>
+                    Number(tick.label)
+                  );
+                  setLabelList(labelList);
+                  console.log({ chart });
+                  console.log({
+                    currentZoom: chart.getZoomLevel(),
+                  });
+                  // chart.zoom(chart.getZoomLevel()+0.4, 'none')
                 },
               },
             },
           },
-        });
-
-        const xScale = myChartRef.current.scales["x"];
-        const labelList = xScale.ticks.map((tick) => Number(tick.label));
-        setLabelList(labelList);
-      } else {
-        myChartRef.current.data.datasets[0].data = resultList;
-        myChartRef.current.data.datasets[1].data = resultList2;
-        myChartRef.current.update();
-      }
-    },
-    [ce, equation]
-  );
+        },
+      });
+      console.log(myChartRef.current);
+      const xScale = myChartRef.current.scales["x"];
+      const labelList = xScale.ticks.map((tick) => Number(tick.label));
+      setLabelList(labelList);
+    } else {
+      myChartRef.current.data.datasets[0].data = resultList;
+      myChartRef.current.data.datasets[1].data = resultList2;
+      myChartRef.current.update();
+    }
+  }, []);
 
   useEffect(() => {
     let resultList = [];
